@@ -2,37 +2,48 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "saku",
   "main": "src/index.ts",
-  "compatibility_date": "2026-02-21"
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+  "compatibility_date": "2024-03-20",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "APP_ENV": "development",
+    "APP_URL": "http://localhost:8787",
+    "CORS_ORIGIN": "*"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SESSION_KV",
+      "id": "session_kv_dev"
+    },
+    {
+      "binding": "BROADCAST_KV",
+      "id": "broadcast_kv_dev"
+    },
+    {
+      "binding": "VERIFY_KV",
+      "id": "verify_kv_dev"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "RECEIPTS_BUCKET",
+      "bucket_name": "saku-receipts-dev"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "saku-db",
+      "database_id": "local-db",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
 }

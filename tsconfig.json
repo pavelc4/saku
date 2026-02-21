@@ -9,6 +9,15 @@
       "ESNext"
     ],
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsxImportSource": "hono/jsx",
+    "types": [
+      "@cloudflare/workers-types",
+      "bun-types"
+    ]
   },
+  "include": [
+    "src/**/*",
+    "worker-configuration.d.ts",
+    "test/**/*"
+  ]
 }
