@@ -51,16 +51,16 @@ export class InsightService {
       LIMIT 3
     `, [userId, start, end]);
 
-    let promptData = `Pemasukan: Rp${income}\nPengeluaran: Rp${expense}\n`;
+    let promptData = `Income: Rp${income}\nExpense: Rp${expense}\n`;
     if (categoryData.length > 0) {
-      promptData += `Kategori Pengeluaran Terbesar:\n`;
+      promptData += `Top Expense Categories:\n`;
       categoryData.forEach((c, idx) => {
         promptData += `${idx + 1}. ${c.name}: Rp${c.total}\n`;
       });
     }
 
     if (income === 0 && expense === 0) {
-       promptData += "Belum ada transaksi di bulan ini.";
+       promptData += "No transactions found for this month.";
     }
 
     // Call Cloudflare AI Limit tokens
@@ -68,13 +68,13 @@ export class InsightService {
       messages: [
         { 
           role: "system", 
-          content: "Kamu adalah asisten keuangan pribadi bernama SAKU yang ramah dan suportif. Berikan ringkasan keuangan bulanan dalam 3-4 kalimat pendek berbahasa Indonesia berdasarkan data yang diberikan. Beri saran singkat. Jangan gunakan markup rumit." 
+          content: "You are a friendly and supportive personal finance assistant named SAKU. Provide a monthly financial summary in 3-4 short sentences in English based on the given data. Give brief advice. Do not use complex markup." 
         },
         { role: "user", content: promptData }
       ]
     });
 
-    const aiResponseText = response.response || "Tidak dapat memproses insight saat ini.";
+    const aiResponseText = response.response || "Unable to process insights at this time.";
 
     // Store in cache
     const newCacheId = Database.id();

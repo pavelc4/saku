@@ -54,7 +54,7 @@ const mockEnv = {
   CORS_ORIGIN: "*",
   AI: {
     run: mock(async () => {
-      return { response: "Menurut data, keuangan Anda stabil dengan sisa dana 3 Juta." };
+      return { response: "According to the data, your finances are stable with a remaining balance of 3 Million." };
     })
   } as any
 };
@@ -68,7 +68,7 @@ describe("Insight Endpoints", () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.success).toBe(true);
-    expect(body.data.insight).toContain("keuangan Anda stabil");
+    expect(body.data.insight).toContain("finances are stable");
   });
 
   test("GET /insights/monthly rejects invalid month", async () => {
