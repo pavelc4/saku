@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import auth from "./routes/auth";
+import categories from "./routes/category";
 import { Env } from "../worker-configuration";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -18,5 +19,6 @@ app.use("*", async (c, next) => {
 app.get("/", (c) => c.text("SAKU API v1.0"));
 
 app.route("/auth", auth);
+app.route("/categories", categories);
 
 export default app;
