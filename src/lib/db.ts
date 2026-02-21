@@ -25,6 +25,20 @@ export class Database {
     }
   }
 
+  async batch(queries: { sql: string; params?: any[] }[]): Promise<void> {
+    const statements = queries.map((q) => {
+      const stmt = this.db.prepare(q.sql);
+      return q.params && q.params.length > 0 ? stmt.bind(...q.params) : stmt;
+    });
+
+    const results = await this.db.batch(statements);
+    for (const res of results) {
+      if (!res.success) {
+        throw new Error(`DB Batch Error: ${res.error}`);
+      }
+    }
+  }
+
   // Generates a new ULID
   static id(): string {
     return ulid();
