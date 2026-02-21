@@ -29,7 +29,7 @@ Most endpoints require authentication. Pass the session token in the header:
 
 ---
 
-## 🔐 Auth Endpoints
+## Auth Endpoints
 
 ### `POST /auth/register`
 
@@ -69,7 +69,7 @@ Revokes the current session token from the KV store and D1 audit log.
 
 ---
 
-## 👤 User Endpoints
+## User Endpoints
 
 ### `PUT /users/me`
 
@@ -80,7 +80,7 @@ Updates the user's profile settings.
 
 ---
 
-## 🗂️ Categories Endpoints
+## Categories Endpoints
 
 ### `GET /categories`
 
@@ -106,7 +106,7 @@ Soft-deletes a custom category.
 
 ---
 
-## 💸 Transactions Endpoints
+## Transactions Endpoints
 
 ### `POST /transactions`
 
@@ -153,7 +153,7 @@ Soft-deletes a transaction.
 
 ---
 
-## 🧾 Receipt Endpoints
+## Receipt Endpoints
 
 ### `POST /transactions/:id/receipt`
 
@@ -169,7 +169,7 @@ Proxies the requested receipt from the private R2 bucket to the client securely.
 
 ---
 
-## 🤖 AI Insights Endpoints
+## AI Insights Endpoints
 
 ### `GET /insights/monthly`
 
