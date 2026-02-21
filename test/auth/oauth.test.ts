@@ -38,7 +38,7 @@ describe("OAuth Endpoints (Mocked Redirects)", () => {
     const res = await app.fetch(req, mockEnv as any);
     
     expect(res.status).toBe(400);
-    const body = await res.json();
+    const body = await res.json() as any;
     expect(body.error).toBe("BAD_REQUEST");
   });
 });

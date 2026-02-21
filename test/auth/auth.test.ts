@@ -55,7 +55,7 @@ describe("Auth Endpoints", () => {
 
     const res = await app.fetch(req, mockEnv as any);
     expect(res.status).toBe(409);
-    const body = await res.json();
+    const body = await res.json() as any;
     expect(body.success).toBe(false);
   });
 
@@ -68,7 +68,7 @@ describe("Auth Endpoints", () => {
 
     const res = await app.fetch(req, mockEnv as any);
     expect(res.status).toBe(201);
-    const body = await res.json();
+    const body = await res.json() as any;
     expect(body.success).toBe(true);
   });
 
@@ -77,7 +77,7 @@ describe("Auth Endpoints", () => {
     const res = await app.fetch(req, mockEnv as any);
     
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await res.json() as any;
     expect(body.success).toBe(true);
   });
 

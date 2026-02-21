@@ -53,7 +53,7 @@ describe("Rate Limit Middleware", () => {
     // Call 4 - Should be rate limited
     const res4 = await app.fetch(makeReq(), mockEnv as any);
     expect(res4.status).toBe(429);
-    const body4 = await res4.json();
+    const body4 = await res4.json() as any;
     expect(body4.error).toBe("TOO_MANY_REQUESTS");
   });
 
@@ -75,7 +75,7 @@ describe("Rate Limit Middleware", () => {
     // Call 6 - Should be rate limited
     const res6 = await app.fetch(makeReq(), mockEnv as any);
     expect(res6.status).toBe(429);
-    const body6 = await res6.json();
+    const body6 = await res6.json() as any;
     expect(body6.error).toBe("TOO_MANY_REQUESTS");
   });
 });
