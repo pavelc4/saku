@@ -2,6 +2,7 @@ import { Context } from "hono";
 import { Database } from "../lib/db";
 import { SessionService } from "../services/session.service";
 import { EmailService } from "../services/email.service";
+import { OAuthService } from "../services/oauth.service";
 import { generateOpaqueToken, hashPassword, verifyPassword } from "../lib/crypto";
 import { errorResponse, successResponse } from "../lib/response";
 
@@ -152,5 +153,108 @@ export class AuthController {
     const session = c.get("session");
     // Should contain subset of session data
     return c.json(successResponse(session));
+  }
+
+  // --- OAUTH GOOGLE ---
+  static async googleLogin(c: Context) {
+    const env = c.env as any;
+    const oauthService = new OAuthService(
+      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET,
+      env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET,
+      env.APP_URL
+    );
+    return c.redirect(oauthService.getGoogleAuthUrl());
+  }
+
+  static async googleCallback(c: Context) {
+    const env = c.env as any;
+    const db = new Database(env.DB);
+    const sessionService = new SessionService(env.SESSION_KV, db);
+    const oauthService = new OAuthService(
+      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET,
+      env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET,
+      env.APP_URL
+    );
+
+    const code = c.req.query("code");
+    if (!code) {
+      return c.json(errorResponse("BAD_REQUEST", "Missing Google auth code"), 400);
+    }
+
+    const googleUser = await oauthService.getGoogleUser(code);
+    if (!googleUser || !googleUser.email) {
+      return c.json(errorResponse("UNAUTHORIZED", "Failed to retrieve Google profile"), 401);
+    }
+
+    return await AuthController.handleOAuthUser(c, db, sessionService, googleUser.email, googleUser.name);
+  }
+
+  // --- OAUTH GITHUB ---
+  static async githubLogin(c: Context) {
+    const env = c.env as any;
+    const oauthService = new OAuthService(
+      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET,
+      env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET,
+      env.APP_URL
+    );
+    return c.redirect(oauthService.getGithubAuthUrl());
+  }
+
+  static async githubCallback(c: Context) {
+    const env = c.env as any;
+    const db = new Database(env.DB);
+    const sessionService = new SessionService(env.SESSION_KV, db);
+    const oauthService = new OAuthService(
+      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET,
+      env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET,
+      env.APP_URL
+    );
+
+    const code = c.req.query("code");
+    if (!code) {
+       return c.json(errorResponse("BAD_REQUEST", "Missing GitHub auth code"), 400);
+    }
+
+    const githubUser = await oauthService.getGithubUser(code);
+    if (!githubUser || !githubUser.email) {
+       return c.json(errorResponse("UNAUTHORIZED", "Failed to retrieve GitHub profile"), 401);
+    }
+
+    return await AuthController.handleOAuthUser(c, db, sessionService, githubUser.email, githubUser.name);
+  }
+
+  // --- INTERNAL OAUTH HANDLER ---
+  private static async handleOAuthUser(c: Context, db: Database, sessionService: SessionService, email: string, name: string) {
+    try {
+      let user = await db.queryFirst(`SELECT id, role, is_banned FROM users WHERE email = ?`, [email]);
+
+      if (!user) {
+        // Register new user via OAuth
+        const userId = Database.id();
+        const now = Database.now();
+        // Null password hash for oauth only
+        await db.execute(
+          `INSERT INTO users (id, email, name, role, is_banned, email_verified, created_at, updated_at) 
+           VALUES (?, ?, ?, 'user', 0, 1, ?, ?)`,
+          [userId, email, name, now, now]
+        );
+        user = { id: userId, role: "user", is_banned: 0 };
+      }
+
+      if (user.is_banned === 1) {
+         return c.json(errorResponse("FORBIDDEN", "This account has been banned"), 403);
+      }
+
+      // Generate session
+      const ip = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || undefined;
+      const sessionId = await sessionService.createSession(user.id, email, user.role, "oauth-login", ip);
+
+      // Redirect client on success
+      const env = c.env as any;
+      return c.redirect(`${env.APP_URL}/oauth/success?token=${sessionId}`);
+    } catch (err: any) {
+      console.error(err);
+      return c.json(errorResponse("INTERNAL_ERROR", "OAuth login failed"), 500);
+    }
   }
 }
