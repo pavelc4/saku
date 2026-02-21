@@ -1,9 +1,22 @@
-import { Hono } from 'hono'
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import auth from "./routes/auth";
+import { Env } from "../worker-configuration";
 
-const app = new Hono()
+const app = new Hono<{ Bindings: Env }>();
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+app.use("*", async (c, next) => {
+  const corsMiddleware = cors({
+    origin: c.env.CORS_ORIGIN || "*",
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    maxAge: 86400,
+  });
+  return corsMiddleware(c, next);
+});
 
-export default app
+app.get("/", (c) => c.text("SAKU API v1.0"));
+
+app.route("/auth", auth);
+
+export default app;

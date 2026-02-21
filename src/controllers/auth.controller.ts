@@ -1,0 +1,156 @@
+import { Context } from "hono";
+import { Database } from "../lib/db";
+import { SessionService } from "../services/session.service";
+import { EmailService } from "../services/email.service";
+import { generateOpaqueToken, hashPassword, verifyPassword } from "../lib/crypto";
+import { errorResponse, successResponse } from "../lib/response";
+
+export class AuthController {
+  
+  static async register(c: Context) {
+    const env = c.env as any;
+    const db = new Database(env.DB);
+    const emailService = new EmailService(env.RESEND_API_KEY);
+    
+    try {
+      const body = await c.req.json();
+      const { email, password, name } = body;
+      
+      if (!email || !password || !name) {
+        return c.json(errorResponse("BAD_REQUEST", "Email, password, and name are required"), 400);
+      }
+
+      // Check if user exists
+      const existingUser = await db.queryFirst(`SELECT id FROM users WHERE email = ?`, [email]);
+      if (existingUser) {
+        return c.json(errorResponse("CONFLICT", "Email is already registered"), 409);
+      }
+
+      const userId = Database.id();
+      const hashedPassword = await hashPassword(password);
+      const now = Database.now();
+
+      // Create User (email_verified defaults to 0)
+      await db.execute(
+        `INSERT INTO users (id, email, password_hash, name, role, is_banned, email_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'user', 0, 0, ?, ?)`,
+        [userId, email, hashedPassword, name, now, now]
+      );
+
+      // Create Verification Token
+      const verifyToken = generateOpaqueToken();
+      
+      // TTL 24 hours (86400 seconds)
+      await env.VERIFY_KV.put(`verify:${verifyToken}`, userId, { expirationTtl: 86400 });
+
+      // Send Email
+      const verifyUrl = `${env.APP_URL}/auth/verify?token=${verifyToken}`;
+      await emailService.sendVerificationEmail(email, verifyUrl);
+
+      return c.json(successResponse({ message: "Registration successful. Please check your email to verify." }), 201);
+    } catch (err: any) {
+      console.error(err);
+      return c.json(errorResponse("INTERNAL_ERROR", "Registration failed"), 500);
+    }
+  }
+
+  static async verifyEmail(c: Context) {
+    const env = c.env as any;
+    const db = new Database(env.DB);
+    const token = c.req.query("token");
+
+    if (!token) {
+      return c.json(errorResponse("BAD_REQUEST", "Verification token is required"), 400);
+    }
+
+    try {
+      const key = `verify:${token}`;
+      const userId = await env.VERIFY_KV.get(key);
+
+      if (!userId) {
+        return c.json(errorResponse("UNAUTHORIZED", "Invalid or expired verification token"), 401);
+      }
+
+      // Update user status
+      await db.execute(`UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?`, [Database.now(), userId]);
+      
+      // Delete token from KV
+      await env.VERIFY_KV.delete(key);
+
+      return c.json(successResponse({ message: "Email successfully verified. You can now log in." }));
+    } catch (err: any) {
+      console.error(err);
+      return c.json(errorResponse("INTERNAL_ERROR", "Verification failed"), 500);
+    }
+  }
+
+  static async login(c: Context) {
+    const env = c.env as any;
+    const db = new Database(env.DB);
+    const sessionService = new SessionService(env.SESSION_KV, db);
+
+    try {
+      const body = await c.req.json();
+      const { email, password, device } = body;
+      
+      if (!email || !password) {
+        return c.json(errorResponse("BAD_REQUEST", "Email and password are required"), 400);
+      }
+
+      // Fetch user
+      const user = await db.queryFirst(`SELECT id, password_hash, role, is_banned, email_verified FROM users WHERE email = ?`, [email]);
+      
+      if (!user) {
+         // Return generic error for security
+        return c.json(errorResponse("UNAUTHORIZED", "Invalid email or password"), 401);
+      }
+
+      if (user.is_banned === 1) {
+        return c.json(errorResponse("FORBIDDEN", "This account has been banned"), 403);
+      }
+
+      if (user.email_verified === 0) {
+        return c.json(errorResponse("FORBIDDEN", "Please verify your email address before logging in"), 403);
+      }
+
+      // Verify Password
+      if (!user.password_hash) {
+        // Probably an OAuth user trying to use password
+        return c.json(errorResponse("UNAUTHORIZED", "Invalid email or password"), 401);
+      }
+
+      const isValid = await verifyPassword(password, user.password_hash);
+      if (!isValid) {
+        return c.json(errorResponse("UNAUTHORIZED", "Invalid email or password"), 401);
+      }
+
+      // Create session
+      const ip = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || undefined;
+      const sessionId = await sessionService.createSession(user.id, email, user.role, device, ip);
+
+      return c.json(successResponse({ token: sessionId }));
+    } catch (err: any) {
+      console.error(err);
+      return c.json(errorResponse("INTERNAL_ERROR", "Login failed"), 500);
+    }
+  }
+
+  static async logout(c: Context) {
+    const env = c.env as any;
+    const db = new Database(env.DB);
+    const sessionService = new SessionService(env.SESSION_KV, db);
+    const token = c.get("token");
+
+    if (token) {
+      await sessionService.revokeSession(token);
+    }
+
+    return c.json(successResponse({ message: "Successfully logged out" }));
+  }
+
+  static async getMe(c: Context) {
+    const session = c.get("session");
+    // Should contain subset of session data
+    return c.json(successResponse(session));
+  }
+}
