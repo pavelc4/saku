@@ -2,7 +2,7 @@ import { Database } from "../lib/db";
 
 interface InsightCache {
   id: string;
-  response: string;
+  insight_data: string;
   created_at: number;
 }
 
@@ -19,11 +19,11 @@ export class InsightService {
     // Check Cache
     if (!forceRefresh) {
       const cache = await this.db.queryFirst<InsightCache>(
-         `SELECT id, response, created_at FROM ai_insights_cache WHERE user_id = ? AND prompt_hash = ? ORDER BY created_at DESC LIMIT 1`,
+         `SELECT id, insight_data, created_at FROM ai_insights_cache WHERE user_id = ? AND period_type = 'monthly' AND period_key = ? ORDER BY created_at DESC LIMIT 1`,
          [userId, periodHash]
       );
       if (cache) {
-        return cache.response;
+        return cache.insight_data;
       }
     }
 
@@ -80,8 +80,9 @@ export class InsightService {
     const newCacheId = Database.id();
     const now = Database.now();
     await this.db.execute(
-      `INSERT INTO ai_insights_cache (id, user_id, period_start, period_end, prompt_hash, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-       [newCacheId, userId, start, end, periodHash, aiResponseText, now]
+      `INSERT INTO ai_insights_cache (id, user_id, period_type, period_key, insight_data, created_at, updated_at) VALUES (?, ?, 'monthly', ?, ?, ?, ?)
+       ON CONFLICT(user_id, period_type, period_key) DO UPDATE SET insight_data = excluded.insight_data, updated_at = excluded.updated_at`,
+       [newCacheId, userId, periodHash, aiResponseText, now, now]
     );
 
     return aiResponseText;
