@@ -28,10 +28,13 @@ Built entirely on the Cloudflare ecosystem using the **[Hono](https://hono.dev)*
 - [Cloudflare KV](https://developers.cloudflare.com/kv/) - Key-value caching
 - [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/) - On-device AI inference
 
-## Resources
+## Resources & Documentation
 
-- [API Documentation](docs/api.md) - Find out how to connect to the backend
-- [Issues](https://github.com/pavelc4/saku/issues) - Report bugs
+- [Backend API Documentation](docs/api.md) - Learn how to interact with the backend endpoints.
+- [Frontend Integration Guide](docs/frontend.md) - Best practices and examples for connecting Svelte, React, or Vue apps.
+- [Cloudflare Deployment Guide](docs/deployment.md) - Step-by-step instructions on deploying SAKU to your own Cloudflare account.
+- [Contributing Guidelines](CONTRIBUTING.md) - Want to help? Learn how to contribute to SAKU!
+- [Report Issues](https://github.com/pavelc4/saku/issues) - Found a bug? Let us know.
 
 ## Stargazers over time
 
