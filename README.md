@@ -31,7 +31,6 @@ Built entirely on the Cloudflare ecosystem using the **[Hono](https://hono.dev)*
 ## Resources
 
 - [API Documentation](docs/api.md) - Find out how to connect to the backend
-- [Releases](https://github.com/pavelc4/saku/releases) - Download latest version
 - [Issues](https://github.com/pavelc4/saku/issues) - Report bugs
 
 ## Stargazers over time
