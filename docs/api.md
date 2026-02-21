@@ -2,14 +2,19 @@
 
 All API endpoints by default respond with the standard Response structure:
 
-```json
+````json
 {
   "success": true, // or false
   "data": { ... }, // Omitted if error
   "error": "ERROR_CODE", // Present if success = false
+```json
+{
+  "success": true,
+  "data": { ... },
+  "error": "ERROR_CODE",
   "message": "Human readable message"
 }
-```
+````
 
 Paginated endpoints respond with:
 
@@ -53,7 +58,9 @@ Verifies an email address using the token sent via email.
 ### `GET /auth/me`
 
 _(Requires Auth)_
-Returns the currently logged-in user's data from the session.
+Returns the currently logged-in user's data from the active session.
+
+- **Response**: `{ "data": { "id": "...", "email": "...", "name": "...", "role": "user" } }`
 
 ### `POST /auth/logout`
 
@@ -62,10 +69,10 @@ Revokes the current session token from the KV store and D1 audit log.
 
 ### OAuth Endpoints
 
-- `GET /auth/google` - Redirect to Google consent screen.
-- `GET /auth/google/callback` - Handling callback.
-- `GET /auth/github` - Redirect to GitHub consent screen.
-- `GET /auth/github/callback` - Handling callback.
+- `GET /auth/google` - Redirects user to Google consent screen.
+- `GET /auth/google/callback` - Callback handler. Redirects to `APP_URL/oauth/success?token=...` on success.
+- `GET /auth/github` - Redirects user to GitHub consent screen.
+- `GET /auth/github/callback` - Callback handler. Redirects to `APP_URL/oauth/success?token=...` on success.
 
 ---
 
@@ -76,7 +83,11 @@ Revokes the current session token from the KV store and D1 audit log.
 _(Requires Auth)_
 Updates the user's profile settings.
 
-- **Body**: `{ "name"?: "New Name", "avatar_url"?: "https://..." }`
+- **Body**:
+  - `name` (optional): string
+  - `avatar_url` (optional): string Url
+
+  _Example_: `{ "name": "New Name", "avatar_url": "https://..." }`
 
 ---
 
@@ -92,12 +103,22 @@ Lists all system default categories and the user's custom categories.
 _(Requires Auth)_
 Create a new custom category.
 
-- **Body**: `{ "name": "...", "type": "income" | "expense" | "both", "color": "#HEX", "icon": "emoji" }`
+- **Body**:
+  - `name`: string
+  - `type`: `"income" | "expense" | "both"`
+  - `color`: string (Hex format, e.g., `#FF0000`)
+  - `icon`: string (Emoji, e.g., 🍔)
 
 ### `PUT /categories/:id`
 
 _(Requires Auth)_
 Update a custom category you own. Returns 403 if attempting to edit a System Category.
+
+- **Body**: (All fields optional)
+  - `name`: string
+  - `type`: `"income" | "expense" | "both"`
+  - `color`: string (Hex format)
+  - `icon`: string (Emoji)
 
 ### `DELETE /categories/:id`
 
@@ -122,7 +143,7 @@ Creates a new transaction and its items atomically.
     "date": 1700000000000,
     "note": "Optional desc",
     "items": [
-      { "name": "Nasi Goreng", "quantity": 1, "price": 150000 }
+      { "name": "Nasi Goreng", "quantity": 1, "price": 150000, "product_id": "optional_id" }
     ]
   }
   ```
@@ -137,14 +158,22 @@ Lists paginated transactions.
 ### `GET /transactions/summary`
 
 _(Requires Auth)_
-Aggregate summary of income/expenses.
+Aggregate summary of income/expenses and category breakdown.
 
-- **Query Params**: `?period=today|week|month|year`
+- **Query Params**:
+  - `period` (optional): `"today" | "week" | "month" | "year"` (default: `month`)
 
 ### `PUT /transactions/:id`
 
 _(Requires Auth)_
-Partially upates a transaction top-level attributes.
+Partially updates a transaction's top-level attributes.
+
+- **Body**: (All fields optional)
+  - `category_id`: string
+  - `type`: `"income" | "expense"`
+  - `amount`: number
+  - `date`: number (Timestamp ms)
+  - `note`: string
 
 ### `DELETE /transactions/:id`
 
@@ -174,6 +203,9 @@ Proxies the requested receipt from the private R2 bucket to the client securely.
 ### `GET /insights/monthly`
 
 _(Requires Auth)_
-Uses Cloudflare AI Llama 3 to analyze the user's monthly transactions and provide a short, localized financial summary context in Indonesian.
+Uses Cloudflare AI Llama-3 to analyze the user's monthly transactions and provide a short, supportive financial summary and advice in English.
 
-- **Query Params**: `?month=1&year=2024&force_refresh=false`
+- **Query Params**:
+  - `month`: number (1-12)
+  - `year`: number (e.g., 2024)
+  - `force_refresh` (optional): boolean (default: false). Bypasses the D1 cache if set to true.
