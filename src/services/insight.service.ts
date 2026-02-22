@@ -1,4 +1,6 @@
 import { Database } from "../lib/db";
+import { buildSystemPrompt, buildUserPrompt } from "../prompts/insights.prompt";
+import { insightConfig } from "../prompts/insights.config";
 
 interface InsightCache {
   id: string;
@@ -9,7 +11,7 @@ interface InsightCache {
 export class InsightService {
   constructor(private db: Database, private ai: any) {}
 
-  async getMonthlyInsight(userId: string, year: number, month: number, forceRefresh: boolean = false): Promise<string> {
+  async getMonthlyInsight(userId: string, year: number, month: number, forceRefresh: boolean = false, lang: 'id' | 'en' = 'id'): Promise<string> {
     const start = new Date(year, month - 1, 1).getTime();
     const end = new Date(year, month, 0, 23, 59, 59, 999).getTime();
 
@@ -51,27 +53,23 @@ export class InsightService {
       LIMIT 3
     `, [userId, start, end]);
 
-    let promptData = `Income: Rp${income}\nExpense: Rp${expense}\n`;
-    if (categoryData.length > 0) {
-      promptData += `Top Expense Categories:\n`;
-      categoryData.forEach((c, idx) => {
-        promptData += `${idx + 1}. ${c.name}: Rp${c.total}\n`;
-      });
-    }
+    const summary = {
+      income,
+      expense,
+      categories: categoryData,
+      note: income === 0 && expense === 0 ? "No transactions found for this month." : undefined
+    };
 
-    if (income === 0 && expense === 0) {
-       promptData += "No transactions found for this month.";
-    }
+    const systemPrompt = buildSystemPrompt(lang);
+    const userPrompt = buildUserPrompt({ lang, summary, month, year });
 
-    // Call Cloudflare AI Limit tokens
-    const response = await this.ai.run('@cf/meta/llama-3-8b-instruct', {
+    // Call Cloudflare AI
+    const response = await this.ai.run('@cf/meta/llama-3.1-8b-instruct', {
       messages: [
-        { 
-          role: "system", 
-          content: "You are a friendly and supportive personal finance assistant named SAKU. Provide a monthly financial summary in 3-4 short sentences in English based on the given data. Give brief advice. Do not use complex markup." 
-        },
-        { role: "user", content: promptData }
-      ]
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: insightConfig.verbosity === 'brief' ? 512 : 1024,
     });
 
     const aiResponseText = response.response || "Unable to process insights at this time.";

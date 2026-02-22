@@ -11,6 +11,8 @@ export class InsightController {
     const monthStr = c.req.query("month");
     const yearStr = c.req.query("year");
     const forceRefresh = c.req.query("force_refresh") === "true";
+    const langRaw = c.req.query("lang");
+    const lang = langRaw === "en" ? "en" : "id";
 
     const month = monthStr ? parseInt(monthStr, 10) : now.getMonth() + 1;
     const year = yearStr ? parseInt(yearStr, 10) : now.getFullYear();
@@ -23,7 +25,7 @@ export class InsightController {
     const insightService = new InsightService(db, c.env.AI);
 
     try {
-      const insight = await insightService.getMonthlyInsight(session.user_id, year, month, forceRefresh);
+      const insight = await insightService.getMonthlyInsight(session.user_id, year, month, forceRefresh, lang);
       return c.json(successResponse({ insight, period: { month, year } }));
     } catch (e: any) {
       console.error(e);
