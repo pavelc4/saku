@@ -26,7 +26,7 @@ export class EmailService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "SAKU Auth <auth@saku.app>", // TODO: Replace with actual verified domain later
+          from: "SAKU <onboarding@resend.dev>",
           to: [to],
           subject: "Verifikasi Pendaftaran SAKU",
           html: html,
