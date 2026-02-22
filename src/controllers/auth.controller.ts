@@ -11,7 +11,7 @@ export class AuthController {
   static async register(c: Context) {
     const env = c.env as any;
     const db = new Database(env.DB);
-    const emailService = new EmailService(env.RESEND_API_KEY);
+    const emailService = new EmailService(env.RESEND_API_KEY, env.EMAIL_SENDER);
     
     try {
       const body = await c.req.json();
