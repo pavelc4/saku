@@ -5,28 +5,28 @@ import { insightConfig } from "../../src/prompts/insights.config";
 describe("Prompt Builder API", () => {
   describe("buildSystemPrompt", () => {
     test("generates correct prompt for Indonesian language", () => {
-      const prompt = buildSystemPrompt('id');
+      const prompt = buildSystemPrompt({ lang: 'id', name: 'Budi' });
       
-      // Should contain the greeting and closing from config
-      expect(prompt).toContain(insightConfig.greetings.id);
-      expect(prompt).toContain(insightConfig.closing.id);
+      // Should contain the greeting and closing from config with name replaced
+      expect(prompt).toContain(insightConfig.greetings.id.replace('{name}', 'Budi'));
+      expect(prompt).toContain(insightConfig.closing.id.replace('{name}', 'Budi'));
       
       // Should not contain English greeting/closing
-      expect(prompt).not.toContain(insightConfig.greetings.en);
+      expect(prompt).not.toContain(insightConfig.greetings.en.replace('{name}', 'Budi'));
 
       // Should contain boundaries
       expect(prompt).toContain(insightConfig.boundaries[0]);
     });
 
     test("generates correct prompt for English language", () => {
-      const prompt = buildSystemPrompt('en');
+      const prompt = buildSystemPrompt({ lang: 'en', name: 'Budi' });
       
-      // Should contain the greeting and closing from config
-      expect(prompt).toContain(insightConfig.greetings.en);
-      expect(prompt).toContain(insightConfig.closing.en);
+      // Should contain the greeting and closing from config with name replaced
+      expect(prompt).toContain(insightConfig.greetings.en.replace('{name}', 'Budi'));
+      expect(prompt).toContain(insightConfig.closing.en.replace('{name}', 'Budi'));
       
       // Should not contain Indonesian greeting/closing
-      expect(prompt).not.toContain(insightConfig.greetings.id);
+      expect(prompt).not.toContain(insightConfig.greetings.id.replace('{name}', 'Budi'));
     });
   });
 
@@ -40,7 +40,7 @@ describe("Prompt Builder API", () => {
         year: 2023
       });
       
-      expect(prompt).toContain("Berikut data keuangan untuk bulan 10/2023");
+      expect(prompt).toContain("Berikut data keuanganku untuk bulan 10/2023");
       expect(prompt).toContain('"income":5000000');
     });
 
@@ -53,7 +53,7 @@ describe("Prompt Builder API", () => {
         year: 2023
       });
       
-      expect(prompt).toContain("Here is the financial data for 10/2023");
+      expect(prompt).toContain("Here is my financial data for 10/2023");
       expect(prompt).toContain('"income":5000000');
     });
   });

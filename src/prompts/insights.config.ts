@@ -12,8 +12,10 @@ export type InsightConfig = {
   include_warning: boolean;
   include_positive: boolean;
   focus: InsightFocus;
+  personality: { id: string; en: string };
   greetings: { id: string; en: string };
   closing: { id: string; en: string };
+  forbidden_phrases: { id: string[]; en: string[] };
   boundaries: string[];
 };
 

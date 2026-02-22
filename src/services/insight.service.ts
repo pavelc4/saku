@@ -29,6 +29,9 @@ export class InsightService {
       }
     }
 
+    const user = await this.db.queryFirst<{name: string}>('SELECT name FROM users WHERE id = ?', [userId]);
+    const userName = user?.name || (lang === 'en' ? 'there' : 'kamu');
+
     // Generate new Insight
     // Aggregate Data
     const summaryData = await this.db.queryFirst<{ income: number; expense: number }>(`
@@ -60,7 +63,7 @@ export class InsightService {
       note: income === 0 && expense === 0 ? "No transactions found for this month." : undefined
     };
 
-    const systemPrompt = buildSystemPrompt(lang);
+    const systemPrompt = buildSystemPrompt({ lang, name: userName });
     const userPrompt = buildUserPrompt({ lang, summary, month, year });
 
     // Call Cloudflare AI
