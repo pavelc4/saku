@@ -1,5 +1,5 @@
 export class EmailService {
-  constructor(private resendApiKey: string) {}
+  constructor(private resendApiKey: string, private senderEmail: string) {}
 
   async sendVerificationEmail(
     to: string,
@@ -7,14 +7,14 @@ export class EmailService {
   ): Promise<boolean> {
     const html = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Verifikasi Email SAKU</h2>
-        <p>Halo,</p>
-        <p>Terima kasih telah mendaftar di SAKU. Silakan klik tombol di bawah ini untuk memverifikasi alamat email Anda:</p>
+        <h2>SAKU Email Verification</h2>
+        <p>Hello,</p>
+        <p>Thank you for registering at SAKU. Please click the button below to verify your email address:</p>
         <a href="${verificationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">
-          Verifikasi Email Saya
+          Verify My Email
         </a>
-        <p>Jika Anda tidak merasa mendaftar di SAKU, abaikan email ini.</p>
-        <p><br>Salam,<br>Tim SAKU</p>
+        <p>If you did not register for SAKU, please ignore this email.</p>
+        <p><br>Best regards,<br>The SAKU Team</p>
       </div>
     `;
 
@@ -26,9 +26,9 @@ export class EmailService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "SAKU <onboarding@resend.dev>",
+          from: this.senderEmail,
           to: [to],
-          subject: "Verifikasi Pendaftaran SAKU",
+          subject: "SAKU Registration Verification",
           html: html,
         }),
       });
