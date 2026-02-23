@@ -251,7 +251,7 @@ export class AuthController {
 
       // Redirect client on success
       const env = c.env as any;
-      return c.redirect(`${env.APP_URL}/oauth/success?token=${sessionId}`);
+      return c.redirect(`${env.FRONTEND_URL || env.APP_URL}/oauth/success?token=${sessionId}`);
     } catch (err: any) {
       console.error(err);
       return c.json(errorResponse("INTERNAL_ERROR", "OAuth login failed"), 500);
