@@ -10,5 +10,6 @@ pos.use("*", authMiddleware);
 pos.get("/session", POSController.getSession);
 pos.post("/open", POSController.openSession);
 pos.post("/close", POSController.closeSession);
+pos.post("/checkout", POSController.checkout);
 
 export default pos;

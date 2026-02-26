@@ -9,6 +9,22 @@ export interface POSSession {
   created_at: number;
 }
 
+export interface CheckoutItem {
+  product_id: string;
+  quantity: number;
+}
+
+export interface CheckoutResult {
+  transaction_id: string;
+  amount: number;
+  items: Array<{
+    product_id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+}
+
 export class POSService {
   constructor(private db: Database) {}
 
@@ -85,4 +101,128 @@ export class POSService {
       total_omzet: totalOmzet
     };
   }
+
+  async checkout(
+    userId: string,
+    items: CheckoutItem[],
+    paymentMethod: string,
+    categoryId: string | null,
+    note: string | null
+  ): Promise<CheckoutResult> {
+    // Check if kasir is open
+    const activeSession = await this.getActiveSession(userId);
+    if (!activeSession) {
+      throw new Error("KASIR_BELUM_DIBUKA");
+    }
+
+    // Validate all products and check stock
+    const productIds = items.map(item => item.product_id);
+    const products = await this.db.query<{
+      id: string;
+      name: string;
+      price: number;
+      stock: number;
+      is_active: number;
+    }>(`
+      SELECT id, name, price, stock, is_active
+      FROM products
+      WHERE id IN (${productIds.map(() => '?').join(',')})
+        AND user_id = ?
+        AND deleted_at IS NULL
+    `, [...productIds, userId]);
+
+    // Check if all products exist
+    if (products.length !== items.length) {
+      throw new Error("PRODUCT_NOT_FOUND");
+    }
+
+    // Create product map for easy lookup
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    // Validate stock and active status
+    const insufficientStock: Array<{ product_id: string; name: string; available: number; requested: number }> = [];
+    const inactiveProducts: string[] = [];
+
+    for (const item of items) {
+      const product = productMap.get(item.product_id);
+      if (!product) continue;
+
+      if (product.is_active === 0) {
+        inactiveProducts.push(product.name);
+      }
+
+      if (product.stock < item.quantity) {
+        insufficientStock.push({
+          product_id: product.id,
+          name: product.name,
+          available: product.stock,
+          requested: item.quantity
+        });
+      }
+    }
+
+    if (inactiveProducts.length > 0) {
+      throw new Error(`PRODUCT_INACTIVE: ${inactiveProducts.join(', ')}`);
+    }
+
+    if (insufficientStock.length > 0) {
+      const error: any = new Error("INSUFFICIENT_STOCK");
+      error.details = insufficientStock;
+      throw error;
+    }
+
+    // Calculate total amount
+    let totalAmount = 0;
+    const itemsWithDetails = items.map(item => {
+      const product = productMap.get(item.product_id)!;
+      const subtotal = product.price * item.quantity;
+      totalAmount += subtotal;
+      return {
+        product_id: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: item.quantity
+      };
+    });
+
+    // Prepare batch queries for atomic execution
+    const transactionId = Database.id();
+    const now = Database.now();
+    const queries: Array<{ sql: string; params: any[] }> = [];
+
+    // 1. Insert transaction
+    queries.push({
+      sql: `INSERT INTO transactions (id, user_id, category_id, type, amount, date, note, source, payment_method, status, pos_session_id, created_at, updated_at)
+            VALUES (?, ?, ?, 'income', ?, ?, ?, 'pos', ?, 'pending', ?, ?, ?)`,
+      params: [transactionId, userId, categoryId, totalAmount, now, note, paymentMethod, activeSession.id, now, now]
+    });
+
+    // 2. Insert transaction items
+    for (const item of itemsWithDetails) {
+      const itemId = Database.id();
+      queries.push({
+        sql: `INSERT INTO transaction_items (id, transaction_id, product_id, name, price, quantity, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        params: [itemId, transactionId, item.product_id, item.name, item.price, item.quantity, now]
+      });
+    }
+
+    // 3. Update stock for each product
+    for (const item of items) {
+      queries.push({
+        sql: `UPDATE products SET stock = stock - ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+        params: [item.quantity, now, item.product_id, userId]
+      });
+    }
+
+    // Execute all queries atomically
+    await this.db.batch(queries);
+
+    return {
+      transaction_id: transactionId,
+      amount: totalAmount,
+      items: itemsWithDetails
+    };
+  }
 }
+
