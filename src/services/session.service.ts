@@ -59,7 +59,7 @@ export class SessionService {
     await this.db.execute(
       `INSERT INTO sessions (id, session_id, user_id, device, ip, created_at, expires_at) 
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [Database.id(), sessionId, userId, device, ip, createdAt, expiresAt]
+      [Database.id(), sessionId, userId, device || null, ip || null, createdAt, expiresAt]
     );
 
     return sessionId;
