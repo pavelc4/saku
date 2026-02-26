@@ -29,6 +29,10 @@
     {
       "binding": "RECEIPTS_BUCKET",
       "bucket_name": "saku-receipts-dev"
+    },
+    {
+      "binding": "PRODUCTS_BUCKET",
+      "bucket_name": "saku-products-dev"
     }
   ],
   "d1_databases": [
@@ -41,6 +45,9 @@
   ],
   "ai": {
     "binding": "AI"
+  },
+  "triggers": {
+    "crons": ["0 17 * * *"]
   },
   "observability": {
     "enabled": true,

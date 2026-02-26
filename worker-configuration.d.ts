@@ -7,6 +7,7 @@ export interface Env {
   BROADCAST_KV: KVNamespace;
   VERIFY_KV: KVNamespace;
   RECEIPTS_BUCKET: R2Bucket;
+  PRODUCTS_BUCKET: R2Bucket;
   AI: any; // Ai binding from Cloudflare
   APP_ENV: "development" | "production";
   APP_URL: string;
