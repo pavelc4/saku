@@ -216,4 +216,18 @@ export class POSController {
       return c.json(errorResponse("INTERNAL_ERROR", "Failed to cancel transaction"), 500);
     }
   }
+
+  static async getSummaryToday(c: Context) {
+    const session = c.get("session");
+    const db = new Database(c.env.DB);
+    const posService = new POSService(db);
+
+    try {
+      const summary = await posService.getSummaryToday(session.user_id);
+      return c.json(successResponse(summary));
+    } catch (e: any) {
+      console.error(e);
+      return c.json(errorResponse("INTERNAL_ERROR", "Failed to get POS summary"), 500);
+    }
+  }
 }

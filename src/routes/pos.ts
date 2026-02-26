@@ -16,4 +16,7 @@ pos.post("/checkout", POSController.checkout);
 pos.patch("/transactions/:id", POSController.editTransaction);
 pos.delete("/transactions/:id", POSController.cancelTransaction);
 
+// POS Summary
+pos.get("/summary-today", POSController.getSummaryToday);
+
 export default pos;

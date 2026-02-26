@@ -456,6 +456,89 @@ export class POSService {
     // Execute all queries atomically
     await this.db.batch(queries);
   }
+
+  async getSummaryToday(userId: string): Promise<{
+    session_id: string | null;
+    kasir_status: 'open' | 'closed';
+    opened_at: number | null;
+    total_transaksi: number;
+    total_omzet: number;
+    breakdown_payment: {
+      cash: number;
+      transfer: number;
+      qris: number;
+    };
+    pending_count: number;
+    confirmed_count: number;
+  }> {
+    // Get active session
+    const activeSession = await this.getActiveSession(userId);
+
+    // Get start of today (00:00:00)
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const endOfToday = startOfToday + 86400000; // +24 hours
+
+    // Get all POS transactions for today
+    const summary = await this.db.queryFirst<{
+      total_transaksi: number;
+      total_omzet: number;
+      pending_count: number;
+      confirmed_count: number;
+    }>(`
+      SELECT 
+        COUNT(*) as total_transaksi,
+        COALESCE(SUM(amount), 0) as total_omzet,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+        SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_count
+      FROM transactions
+      WHERE user_id = ?
+        AND source = 'pos'
+        AND date >= ?
+        AND date < ?
+        AND deleted_at IS NULL
+    `, [userId, startOfToday, endOfToday]);
+
+    // Get payment method breakdown
+    const paymentBreakdown = await this.db.query<{
+      payment_method: string;
+      total: number;
+    }>(`
+      SELECT 
+        payment_method,
+        COALESCE(SUM(amount), 0) as total
+      FROM transactions
+      WHERE user_id = ?
+        AND source = 'pos'
+        AND date >= ?
+        AND date < ?
+        AND deleted_at IS NULL
+      GROUP BY payment_method
+    `, [userId, startOfToday, endOfToday]);
+
+    const breakdown = {
+      cash: 0,
+      transfer: 0,
+      qris: 0
+    };
+
+    for (const row of paymentBreakdown) {
+      if (row.payment_method in breakdown) {
+        breakdown[row.payment_method as keyof typeof breakdown] = row.total;
+      }
+    }
+
+    return {
+      session_id: activeSession?.id || null,
+      kasir_status: activeSession ? 'open' : 'closed',
+      opened_at: activeSession?.opened_at || null,
+      total_transaksi: summary?.total_transaksi || 0,
+      total_omzet: summary?.total_omzet || 0,
+      breakdown_payment: breakdown,
+      pending_count: summary?.pending_count || 0,
+      confirmed_count: summary?.confirmed_count || 0
+    };
+  }
 }
 
 
