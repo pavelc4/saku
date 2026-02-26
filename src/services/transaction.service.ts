@@ -184,7 +184,11 @@ export class TransactionService {
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expense,
         COUNT(id) as count
       FROM transactions
-      WHERE user_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL
+      WHERE user_id = ? 
+        AND date >= ? 
+        AND date <= ? 
+        AND status = 'confirmed'
+        AND deleted_at IS NULL
     `, [userId, periodStart, periodEnd]);
 
     const totalIncome = result?.total_income || 0;
