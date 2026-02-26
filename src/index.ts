@@ -5,6 +5,7 @@ import categories from "./routes/category";
 import transactions from "./routes/transaction";
 import users from "./routes/user";
 import insights from "./routes/insight";
+import products from "./routes/products";
 import { Env } from "../worker-configuration";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -26,5 +27,6 @@ app.route("/users", users);
 app.route("/categories", categories);
 app.route("/transactions", transactions);
 app.route("/insights", insights);
+app.route("/products", products);
 
 export default app;
