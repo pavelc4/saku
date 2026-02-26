@@ -21,7 +21,7 @@ export class ProductCategoryService {
   async listCategories(userId: string): Promise<ProductCategory[]> {
     const categories = await this.db.query<ProductCategory>(`
       SELECT * FROM product_categories
-      WHERE (user_id IS NULL OR user_id = ?)
+      WHERE user_id = ?
         AND deleted_at IS NULL
       ORDER BY created_at ASC
     `, [userId]);

@@ -6,6 +6,7 @@ import transactions from "./routes/transaction";
 import users from "./routes/user";
 import insights from "./routes/insight";
 import products from "./routes/products";
+import productCategories from "./routes/product-categories";
 import pos from "./routes/pos";
 import { Env } from "../worker-configuration";
 
@@ -29,6 +30,7 @@ app.route("/categories", categories);
 app.route("/transactions", transactions);
 app.route("/insights", insights);
 app.route("/products", products);
+app.route("/product-categories", productCategories);
 app.route("/pos", pos);
 
 // Cron handler for auto-confirming pending POS transactions
