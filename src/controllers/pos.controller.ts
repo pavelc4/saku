@@ -14,6 +14,16 @@ const checkoutSchema = z.object({
   category_id: z.string().optional().nullable(),
 });
 
+const editPOSTransactionSchema = z.object({
+  edit_reason: z.string().min(1).max(255),
+  items: z.array(z.object({
+    product_id: z.string(),
+    quantity: z.number().int().positive().max(9999),
+  })).min(1).optional(),
+  payment_method: z.enum(['cash', 'transfer', 'qris']).optional(),
+  note: z.string().max(255).optional().nullable(),
+});
+
 export class POSController {
   static async getSession(c: Context) {
     const session = c.get("session");
@@ -116,6 +126,94 @@ export class POSController {
       }
 
       return c.json(errorResponse("INTERNAL_ERROR", "Failed to process checkout"), 500);
+    }
+  }
+
+  static async editTransaction(c: Context) {
+    const session = c.get("session");
+    const transactionId = c.req.param("id");
+    const db = new Database(c.env.DB);
+    const posService = new POSService(db);
+
+    try {
+      const body = await c.req.json();
+      const parsed = editPOSTransactionSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return c.json(errorResponse("BAD_REQUEST", "Validation failed"), 400);
+      }
+
+      await posService.editPendingTransaction(
+        session.user_id,
+        transactionId,
+        parsed.data.edit_reason,
+        parsed.data.items,
+        parsed.data.payment_method,
+        parsed.data.note
+      );
+
+      return c.json(successResponse({ message: "Transaction updated" }));
+    } catch (e: any) {
+      console.error(e);
+
+      if (e.message === "TRANSACTION_NOT_FOUND") {
+        return c.json(errorResponse("NOT_FOUND", "Transaksi tidak ditemukan"), 404);
+      }
+
+      if (e.message === "CANNOT_EDIT_CONFIRMED") {
+        return c.json(errorResponse("BAD_REQUEST", "Tidak bisa edit transaksi yang sudah confirmed"), 400);
+      }
+
+      if (e.message === "NOT_POS_TRANSACTION") {
+        return c.json(errorResponse("BAD_REQUEST", "Bukan transaksi POS"), 400);
+      }
+
+      if (e.message === "PRODUCT_NOT_FOUND") {
+        return c.json(errorResponse("NOT_FOUND", "Satu atau lebih produk tidak ditemukan"), 404);
+      }
+
+      if (e.message.startsWith("PRODUCT_INACTIVE")) {
+        return c.json(errorResponse("BAD_REQUEST", e.message.replace("PRODUCT_INACTIVE: ", "Produk tidak aktif: ")), 400);
+      }
+
+      if (e.message === "INSUFFICIENT_STOCK") {
+        return c.json({
+          success: false,
+          error: "INSUFFICIENT_STOCK",
+          message: "Stok tidak mencukupi",
+          details: e.details
+        }, 400);
+      }
+
+      return c.json(errorResponse("INTERNAL_ERROR", "Failed to edit transaction"), 500);
+    }
+  }
+
+  static async cancelTransaction(c: Context) {
+    const session = c.get("session");
+    const transactionId = c.req.param("id");
+    const db = new Database(c.env.DB);
+    const posService = new POSService(db);
+
+    try {
+      await posService.cancelPendingTransaction(session.user_id, transactionId);
+      return c.json(successResponse({ message: "Transaction cancelled" }));
+    } catch (e: any) {
+      console.error(e);
+
+      if (e.message === "TRANSACTION_NOT_FOUND") {
+        return c.json(errorResponse("NOT_FOUND", "Transaksi tidak ditemukan"), 404);
+      }
+
+      if (e.message === "CANNOT_CANCEL_CONFIRMED") {
+        return c.json(errorResponse("BAD_REQUEST", "Tidak bisa batalkan transaksi yang sudah confirmed"), 400);
+      }
+
+      if (e.message === "NOT_POS_TRANSACTION") {
+        return c.json(errorResponse("BAD_REQUEST", "Bukan transaksi POS"), 400);
+      }
+
+      return c.json(errorResponse("INTERNAL_ERROR", "Failed to cancel transaction"), 500);
     }
   }
 }

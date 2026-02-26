@@ -224,5 +224,238 @@ export class POSService {
       items: itemsWithDetails
     };
   }
+
+  async editPendingTransaction(
+    userId: string,
+    transactionId: string,
+    editReason: string,
+    items?: CheckoutItem[],
+    paymentMethod?: string,
+    note?: string | null
+  ): Promise<void> {
+    // Check if transaction exists, is pending, and belongs to user
+    const transaction = await this.db.queryFirst<{
+      id: string;
+      status: string;
+      source: string;
+      pos_session_id: string;
+    }>(`
+      SELECT id, status, source, pos_session_id
+      FROM transactions
+      WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+    `, [transactionId, userId]);
+
+    if (!transaction) {
+      throw new Error("TRANSACTION_NOT_FOUND");
+    }
+
+    if (transaction.status !== 'pending') {
+      throw new Error("CANNOT_EDIT_CONFIRMED");
+    }
+
+    if (transaction.source !== 'pos') {
+      throw new Error("NOT_POS_TRANSACTION");
+    }
+
+    const now = Database.now();
+    const queries: Array<{ sql: string; params: any[] }> = [];
+
+    // If items are being updated, we need to:
+    // 1. Return stock from old items
+    // 2. Deduct stock for new items
+    // 3. Delete old items
+    // 4. Insert new items
+    // 5. Recalculate amount
+    if (items && items.length > 0) {
+      // Get old items to return stock
+      const oldItems = await this.db.query<{
+        product_id: string;
+        quantity: number;
+      }>(`
+        SELECT product_id, quantity
+        FROM transaction_items
+        WHERE transaction_id = ? AND product_id IS NOT NULL
+      `, [transactionId]);
+
+      // Return stock from old items
+      for (const oldItem of oldItems) {
+        queries.push({
+          sql: `UPDATE products SET stock = stock + ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+          params: [oldItem.quantity, now, oldItem.product_id, userId]
+        });
+      }
+
+      // Validate new products and check stock
+      const productIds = items.map(item => item.product_id);
+      const products = await this.db.query<{
+        id: string;
+        name: string;
+        price: number;
+        stock: number;
+        is_active: number;
+      }>(`
+        SELECT id, name, price, stock, is_active
+        FROM products
+        WHERE id IN (${productIds.map(() => '?').join(',')})
+          AND user_id = ?
+          AND deleted_at IS NULL
+      `, [...productIds, userId]);
+
+      if (products.length !== items.length) {
+        throw new Error("PRODUCT_NOT_FOUND");
+      }
+
+      const productMap = new Map(products.map(p => [p.id, p]));
+      const insufficientStock: Array<{ product_id: string; name: string; available: number; requested: number }> = [];
+
+      for (const item of items) {
+        const product = productMap.get(item.product_id);
+        if (!product) continue;
+
+        if (product.is_active === 0) {
+          throw new Error(`PRODUCT_INACTIVE: ${product.name}`);
+        }
+
+        // Check stock after returning old items
+        const oldItemQty = oldItems.find(oi => oi.product_id === item.product_id)?.quantity || 0;
+        const availableStock = product.stock + oldItemQty;
+
+        if (availableStock < item.quantity) {
+          insufficientStock.push({
+            product_id: product.id,
+            name: product.name,
+            available: availableStock,
+            requested: item.quantity
+          });
+        }
+      }
+
+      if (insufficientStock.length > 0) {
+        const error: any = new Error("INSUFFICIENT_STOCK");
+        error.details = insufficientStock;
+        throw error;
+      }
+
+      // Calculate new amount
+      let newAmount = 0;
+      for (const item of items) {
+        const product = productMap.get(item.product_id)!;
+        newAmount += product.price * item.quantity;
+      }
+
+      // Delete old items
+      queries.push({
+        sql: `DELETE FROM transaction_items WHERE transaction_id = ?`,
+        params: [transactionId]
+      });
+
+      // Insert new items
+      for (const item of items) {
+        const product = productMap.get(item.product_id)!;
+        const itemId = Database.id();
+        queries.push({
+          sql: `INSERT INTO transaction_items (id, transaction_id, product_id, name, price, quantity, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          params: [itemId, transactionId, item.product_id, product.name, product.price, item.quantity, now]
+        });
+      }
+
+      // Deduct stock for new items
+      for (const item of items) {
+        queries.push({
+          sql: `UPDATE products SET stock = stock - ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+          params: [item.quantity, now, item.product_id, userId]
+        });
+      }
+
+      // Update transaction amount
+      queries.push({
+        sql: `UPDATE transactions SET amount = ?, updated_at = ?, edit_reason = ? WHERE id = ?`,
+        params: [newAmount, now, editReason, transactionId]
+      });
+    } else {
+      // Only update payment method and/or note
+      const updates: string[] = [];
+      const values: any[] = [];
+
+      if (paymentMethod !== undefined) {
+        updates.push("payment_method = ?");
+        values.push(paymentMethod);
+      }
+
+      if (note !== undefined) {
+        updates.push("note = ?");
+        values.push(note);
+      }
+
+      updates.push("edit_reason = ?", "updated_at = ?");
+      values.push(editReason, now, transactionId);
+
+      queries.push({
+        sql: `UPDATE transactions SET ${updates.join(", ")} WHERE id = ?`,
+        params: values
+      });
+    }
+
+    // Execute all queries atomically
+    await this.db.batch(queries);
+  }
+
+  async cancelPendingTransaction(userId: string, transactionId: string): Promise<void> {
+    // Check if transaction exists, is pending, and belongs to user
+    const transaction = await this.db.queryFirst<{
+      id: string;
+      status: string;
+      source: string;
+    }>(`
+      SELECT id, status, source
+      FROM transactions
+      WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+    `, [transactionId, userId]);
+
+    if (!transaction) {
+      throw new Error("TRANSACTION_NOT_FOUND");
+    }
+
+    if (transaction.status !== 'pending') {
+      throw new Error("CANNOT_CANCEL_CONFIRMED");
+    }
+
+    if (transaction.source !== 'pos') {
+      throw new Error("NOT_POS_TRANSACTION");
+    }
+
+    const now = Database.now();
+
+    // Get items to return stock
+    const items = await this.db.query<{
+      product_id: string;
+      quantity: number;
+    }>(`
+      SELECT product_id, quantity
+      FROM transaction_items
+      WHERE transaction_id = ? AND product_id IS NOT NULL
+    `, [transactionId]);
+
+    const queries: Array<{ sql: string; params: any[] }> = [];
+
+    // Return stock for each item
+    for (const item of items) {
+      queries.push({
+        sql: `UPDATE products SET stock = stock + ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+        params: [item.quantity, now, item.product_id, userId]
+      });
+    }
+
+    // Soft delete transaction
+    queries.push({
+      sql: `UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE id = ?`,
+      params: [now, now, transactionId]
+    });
+
+    // Execute all queries atomically
+    await this.db.batch(queries);
+  }
 }
+
 
