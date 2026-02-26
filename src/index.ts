@@ -31,4 +31,41 @@ app.route("/insights", insights);
 app.route("/products", products);
 app.route("/pos", pos);
 
-export default app;
+// Cron handler for auto-confirming pending POS transactions
+async function autoConfirmPendingTransactions(env: Env): Promise<void> {
+  const now = Date.now();
+  // Grace period: 1 hour (don't confirm transactions created in the last hour)
+  const oneHourAgo = now - 3600000;
+
+  try {
+    // Auto-confirm all pending POS transactions older than 1 hour
+    await env.DB.prepare(`
+      UPDATE transactions
+      SET status = 'confirmed', updated_at = ?
+      WHERE status = 'pending'
+        AND source = 'pos'
+        AND deleted_at IS NULL
+        AND created_at < ?
+    `).bind(now, oneHourAgo).run();
+
+    // Auto-close all open POS sessions older than 1 hour
+    await env.DB.prepare(`
+      UPDATE pos_sessions
+      SET closed_at = ?
+      WHERE closed_at IS NULL
+        AND opened_at < ?
+    `).bind(now, oneHourAgo).run();
+
+    console.log(`[CRON] Auto-confirmed pending transactions and closed open sessions at ${new Date(now).toISOString()}`);
+  } catch (error) {
+    console.error('[CRON] Error auto-confirming transactions:', error);
+  }
+}
+
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(autoConfirmPendingTransactions(env));
+  },
+};
+
