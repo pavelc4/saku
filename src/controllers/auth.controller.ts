@@ -61,7 +61,7 @@ export class AuthController {
     const token = c.req.query("token");
 
     if (!token) {
-      return c.json(errorResponse("BAD_REQUEST", "Verification token is required"), 400);
+      return c.redirect(`${env.FRONTEND_URL}/auth/verify?status=error&message=Token tidak ditemukan`);
     }
 
     try {
@@ -69,7 +69,7 @@ export class AuthController {
       const userId = await env.VERIFY_KV.get(key);
 
       if (!userId) {
-        return c.json(errorResponse("UNAUTHORIZED", "Invalid or expired verification token"), 401);
+        return c.redirect(`${env.FRONTEND_URL}/auth/verify?status=error&message=Token tidak valid atau sudah kadaluarsa`);
       }
 
       // Update user status
@@ -78,10 +78,10 @@ export class AuthController {
       // Delete token from KV
       await env.VERIFY_KV.delete(key);
 
-      return c.json(successResponse({ message: "Email successfully verified. You can now log in." }));
+      return c.redirect(`${env.FRONTEND_URL}/auth/verify?status=success`);
     } catch (err: any) {
       console.error(err);
-      return c.json(errorResponse("INTERNAL_ERROR", "Verification failed"), 500);
+      return c.redirect(`${env.FRONTEND_URL}/auth/verify?status=error&message=Terjadi kesalahan saat verifikasi`);
     }
   }
 
