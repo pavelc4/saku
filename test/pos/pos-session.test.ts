@@ -8,27 +8,28 @@ const createMockEnv = (hasActiveSession: boolean = false) => ({
         bind: mock((...params: any[]) => {
           return {
             all: mock(async () => {
-              return { success: true, results: [] };
-            }),
-            first: mock(async () => {
-              if (query.includes("SELECT * FROM pos_sessions WHERE user_id = ? AND closed_at IS NULL")) {
+              if (query.includes("SELECT * FROM pos_sessions") && query.includes("closed_at IS NULL")) {
                 if (hasActiveSession) {
                   return { 
-                    id: "session1", 
-                    user_id: "user_123", 
-                    opened_at: Date.now() - 1000,
-                    closed_at: null,
-                    total_omzet: 0,
-                    created_at: Date.now() - 1000
+                    success: true, 
+                    results: [{
+                      id: "session1", 
+                      user_id: "user_123", 
+                      opened_at: Date.now() - 1000,
+                      closed_at: null,
+                      total_omzet: 0,
+                      created_at: Date.now() - 1000
+                    }]
                   };
                 }
-                return null;
+                return { success: true, results: [] };
               }
               if (query.includes("SELECT COALESCE(SUM(amount), 0) as total")) {
-                return { total: 500000 };
+                return { success: true, results: [{ total: 500000 }] };
               }
-              return null;
+              return { success: true, results: [] };
             }),
+            first: mock(async () => null),
             run: mock(async () => {
               return { success: true };
             }),

@@ -8,7 +8,7 @@ const createMockEnv = (scenario: string) => ({
         bind: mock((...params: any[]) => {
           return {
             all: mock(async () => {
-              if (query.includes("SELECT product_id, quantity FROM transaction_items")) {
+              if (query.includes("SELECT product_id, quantity") && query.includes("FROM transaction_items")) {
                 return {
                   success: true,
                   results: [
@@ -17,7 +17,7 @@ const createMockEnv = (scenario: string) => ({
                   ]
                 };
               }
-              if (query.includes("SELECT id, name, price, stock, is_active FROM products")) {
+              if (query.includes("SELECT id, name, price, stock, is_active") && query.includes("FROM products")) {
                 return {
                   success: true,
                   results: [
@@ -26,22 +26,20 @@ const createMockEnv = (scenario: string) => ({
                   ]
                 };
               }
-              return { success: true, results: [] };
-            }),
-            first: mock(async () => {
-              if (query.includes("SELECT id, status, source")) {
+              if (query.includes("SELECT id, status, source") && query.includes("FROM transactions")) {
                 if (scenario === "pending_pos") {
-                  return { id: "txn1", status: "pending", source: "pos", pos_session_id: "session1" };
+                  return { success: true, results: [{ id: "txn1", status: "pending", source: "pos", pos_session_id: "session1" }] };
                 } else if (scenario === "confirmed") {
-                  return { id: "txn1", status: "confirmed", source: "pos" };
+                  return { success: true, results: [{ id: "txn1", status: "confirmed", source: "pos" }] };
                 } else if (scenario === "not_pos") {
-                  return { id: "txn1", status: "pending", source: "manual" };
+                  return { success: true, results: [{ id: "txn1", status: "pending", source: "manual" }] };
                 } else if (scenario === "not_found") {
-                  return null;
+                  return { success: true, results: [] };
                 }
               }
-              return null;
+              return { success: true, results: [] };
             }),
+            first: mock(async () => null),
             run: mock(async () => {
               return { success: true };
             }),

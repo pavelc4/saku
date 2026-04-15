@@ -8,7 +8,7 @@ const createMockEnv = (scenario: string) => ({
         bind: mock((...params: any[]) => {
           return {
             all: mock(async () => {
-              if (query.includes("SELECT id, name, price, stock, is_active FROM products")) {
+              if (query.includes("SELECT id, name, price, stock, is_active") && query.includes("FROM products")) {
                 if (scenario === "sufficient_stock") {
                   return {
                     success: true,
@@ -33,24 +33,25 @@ const createMockEnv = (scenario: string) => ({
                   };
                 }
               }
-              return { success: true, results: [] };
-            }),
-            first: mock(async () => {
-              if (query.includes("SELECT * FROM pos_sessions WHERE user_id = ? AND closed_at IS NULL")) {
+              if (query.includes("SELECT * FROM pos_sessions") && query.includes("closed_at IS NULL")) {
                 if (scenario === "no_session") {
-                  return null;
+                  return { success: true, results: [] };
                 }
                 return { 
-                  id: "session1", 
-                  user_id: "user_123", 
-                  opened_at: Date.now(),
-                  closed_at: null,
-                  total_omzet: 0,
-                  created_at: Date.now()
+                  success: true,
+                  results: [{
+                    id: "session1", 
+                    user_id: "user_123", 
+                    opened_at: Date.now(),
+                    closed_at: null,
+                    total_omzet: 0,
+                    created_at: Date.now()
+                  }]
                 };
               }
-              return null;
+              return { success: true, results: [] };
             }),
+            first: mock(async () => null),
             run: mock(async () => {
               return { success: true };
             }),
