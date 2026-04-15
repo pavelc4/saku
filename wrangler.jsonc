@@ -1,56 +1,64 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "saku",
-  "main": "src/index.ts",
-  "compatibility_date": "2024-03-20",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "vars": {
-    "APP_ENV": "development",
-    "APP_URL": "http://localhost:8787",
-    "CORS_ORIGIN": "*"
-  },
-  "kv_namespaces": [
-    {
-      "binding": "SESSION_KV",
-      "id": "session_kv_dev"
-    },
-    {
-      "binding": "BROADCAST_KV",
-      "id": "broadcast_kv_dev"
-    },
-    {
-      "binding": "VERIFY_KV",
-      "id": "verify_kv_dev"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "RECEIPTS_BUCKET",
-      "bucket_name": "saku-receipts-dev"
-    },
-    {
-      "binding": "PRODUCTS_BUCKET",
-      "bucket_name": "saku-products-dev"
-    }
-  ],
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "saku-db",
-      "database_id": "local-db",
-      "migrations_dir": "migrations"
-    }
-  ],
-  "ai": {
-    "binding": "AI"
-  },
-  "triggers": {
-    "crons": ["0 17 * * *"]
-  },
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "saku",
+	"main": "src/index.ts",
+	"compatibility_date": "2024-03-20",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"vars": {
+		"APP_ENV": "development",
+		"APP_URL": "http://localhost:8787",
+		"CORS_ORIGIN": "*"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "SESSION_KV",
+			"id": "session_kv_dev"
+		},
+		{
+			"binding": "BROADCAST_KV",
+			"id": "broadcast_kv_dev"
+		},
+		{
+			"binding": "VERIFY_KV",
+			"id": "verify_kv_dev"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "RECEIPTS_BUCKET",
+			"bucket_name": "saku-receipts-dev"
+		},
+		{
+			"binding": "PRODUCTS_BUCKET",
+			"bucket_name": "saku-products-dev"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "saku-db",
+			"database_id": "local-db",
+			"migrations_dir": "migrations"
+		},
+		{
+			"binding": "saku",
+			"database_name": "saku-db",
+			"database_id": "6148431e-9c24-4822-84e4-4c24fab1fe0a",
+			"remote": true
+		}
+	],
+	"ai": {
+		"binding": "AI"
+	},
+	"triggers": {
+		"crons": [
+			"0 17 * * *"
+		]
+	},
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	}
 }
