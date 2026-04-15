@@ -29,8 +29,8 @@ app.route("/users", users);
 app.route("/categories", categories);
 app.route("/transactions", transactions);
 app.route("/insights", insights);
+app.route("/products/categories", productCategories);
 app.route("/products", products);
-app.route("/product-categories", productCategories);
 app.route("/pos", pos);
 
 // Cron handler for auto-confirming pending POS transactions
