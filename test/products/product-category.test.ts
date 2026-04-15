@@ -9,6 +9,20 @@ const mockEnv = {
           return {
             all: mock(async () => {
               if (query.includes("SELECT * FROM product_categories")) {
+                if (query.includes("WHERE id = ? AND user_id = ?")) {
+                  if (params.length >= 2) {
+                    const id = params[0];
+                    const userId = params[1];
+                    if (id === "sys1") {
+                      return { success: true, results: [] };
+                    }
+                    if (id === "custom1" && userId === "user_123") {
+                      return { success: true, results: [{ id: "custom1", user_id: "user_123", name: "Custom Cat", color: "#FF0000" }] };
+                    }
+                  }
+                  return { success: true, results: [] };
+                }
+
                 return {
                   success: true,
                   results: [
@@ -19,26 +33,7 @@ const mockEnv = {
               }
               return { success: true, results: [] };
             }),
-            first: mock(async () => {
-              if (query.includes("SELECT * FROM product_categories")) {
-                // Check for WHERE id = ? AND user_id = ? (ownership check)
-                if (params.length >= 2) {
-                  const id = params[0];
-                  const userId = params[1];
-                  
-                  // System default won't match user_id check
-                  if (id === "sys1") {
-                    return null;
-                  }
-                  // Custom category matches
-                  if (id === "custom1" && userId === "user_123") {
-                    return { id: "custom1", user_id: "user_123", name: "Custom Cat", color: "#FF0000" };
-                  }
-                }
-                return null;
-              }
-              return null;
-            }),
+            first: mock(async () => null),
             run: mock(async () => {
               return { success: true };
             }),

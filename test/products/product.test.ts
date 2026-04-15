@@ -9,6 +9,26 @@ const mockEnv = {
           return {
             all: mock(async () => {
               if (query.includes("SELECT p.*, pc.name as category_name")) {
+                if (params.length >= 2 && params[0] === "prod1" && params[1] === "user_123") {
+                  return { 
+                    success: true,
+                    results: [{
+                      id: "prod1", 
+                      user_id: "user_123", 
+                      name: "Product 1", 
+                      price: 10000,
+                      stock: 50,
+                      is_active: 1,
+                      photo_url: null,
+                      product_category_id: "cat1",
+                      category_name: "Makanan",
+                      category_color: "#F97316",
+                      created_at: 1,
+                      updated_at: 1,
+                      deleted_at: null
+                    }]
+                  };
+                }
                 return {
                   success: true,
                   results: [
@@ -30,32 +50,15 @@ const mockEnv = {
                   ]
                 };
               }
+              // For ownership check in update/delete (with or without deleted_at IS NULL)
+              if (query.includes("SELECT id FROM products WHERE id = ?") && query.includes("user_id = ?")) {
+                if (params.length >= 2 && params[0] === "prod1" && params[1] === "user_123") {
+                  return { success: true, results: [{ id: "prod1" }] };
+                }
+              }
               return { success: true, results: [] };
             }),
-            first: mock(async () => {
-              // For getProductById
-              if (query.includes("SELECT p.*, pc.name as category_name")) {
-                if (params.length >= 2 && params[0] === "prod1" && params[1] === "user_123") {
-                  return { 
-                    id: "prod1", 
-                    user_id: "user_123", 
-                    name: "Product 1", 
-                    price: 10000,
-                    stock: 50,
-                    photo_url: null,
-                    category_name: "Makanan",
-                    category_color: "#F97316"
-                  };
-                }
-              }
-              // For ownership check in update/delete
-              if (query.includes("SELECT id FROM products WHERE id = ? AND user_id = ?")) {
-                if (params.length >= 2 && params[0] === "prod1" && params[1] === "user_123") {
-                  return { id: "prod1" };
-                }
-              }
-              return null;
-            }),
+            first: mock(async () => null),
             run: mock(async () => {
               return { success: true };
             }),
