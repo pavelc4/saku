@@ -14,25 +14,25 @@
 	"kv_namespaces": [
 		{
 			"binding": "SESSION_KV",
-			"id": "session_kv_dev"
+			"id": "1d33599045e84ec6970193e8d5a70ec9"
 		},
 		{
 			"binding": "BROADCAST_KV",
-			"id": "broadcast_kv_dev"
+			"id": "0bea163d68f9401eb6aebe851c620d58"
 		},
 		{
 			"binding": "VERIFY_KV",
-			"id": "verify_kv_dev"
+			"id": "f7029c871c3e432096d6da30f503e680"
 		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "RECEIPTS_BUCKET",
-			"bucket_name": "saku-receipts-dev"
+			"bucket_name": "saku-receipts"
 		},
 		{
 			"binding": "PRODUCTS_BUCKET",
-			"bucket_name": "saku-products-dev"
+			"bucket_name": "saku-products"
 		}
 	],
 	"d1_databases": [
