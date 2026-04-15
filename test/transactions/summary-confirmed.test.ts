@@ -8,28 +8,32 @@ const mockEnv = {
         bind: mock((...params: any[]) => {
           return {
             all: mock(async () => {
-              return { success: true, results: [] };
-            }),
-            first: mock(async () => {
               if (query.includes("SUM(CASE WHEN type = 'income'")) {
                 // Verify that query includes status = 'confirmed' filter
                 if (query.includes("status = 'confirmed'")) {
                   return {
-                    total_income: 1000000,
-                    total_expense: 500000,
-                    count: 10
+                    success: true,
+                    results: [{
+                      total_income: 1000000,
+                      total_expense: 500000,
+                      count: 10
+                    }]
                   };
                 } else {
                   // If status filter is missing, return different values to detect the issue
                   return {
-                    total_income: 1500000, // Would include pending
-                    total_expense: 700000,
-                    count: 15
+                    success: true,
+                    results: [{
+                      total_income: 1500000, // Would include pending
+                      total_expense: 700000,
+                      count: 15
+                    }]
                   };
                 }
               }
-              return null;
+              return { success: true, results: [] };
             }),
+            first: mock(async () => null),
             run: mock(async () => {
               return { success: true };
             }),
